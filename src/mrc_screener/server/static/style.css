@@ -1,0 +1,148 @@
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #0b0b0c;
+  color: #e6e6e6;
+  font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  overflow: hidden;
+}
+
+.hidden {
+  display: none !important;
+}
+
+#banner {
+  padding: 0.5rem 1rem;
+  background: #3a2e0b;
+  color: #f5cf6b;
+  border-bottom: 1px solid #5a4a12;
+  font-size: 0.9rem;
+}
+
+#status-bar {
+  display: flex;
+  gap: 1.5rem;
+  align-items: baseline;
+  padding: 0.6rem 1rem;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.95rem;
+  border-bottom: 1px solid #222;
+  background: #131315;
+}
+
+#position {
+  font-weight: 600;
+  color: #fff;
+}
+
+#filename {
+  color: #9aa0a6;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#counts {
+  color: #9aa0a6;
+}
+
+#viewer {
+  position: relative;
+  height: calc(100vh - 3rem - 2.2rem);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+}
+
+#frame {
+  max-width: 100%;
+  max-height: 100%;
+  image-rendering: pixelated;
+}
+
+#slice-label {
+  position: absolute;
+  bottom: 0.75rem;
+  right: 1rem;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  color: #9aa0a6;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+}
+
+#done {
+  position: fixed;
+  inset: 3rem 0 2.2rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  background: #0b0b0c;
+}
+
+#done button {
+  font-size: 1rem;
+  padding: 0.6rem 1.2rem;
+  background: #2a6ed4;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#done button:hover {
+  background: #3a7ee0;
+}
+
+#help {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+#help table {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 1rem;
+  border-collapse: collapse;
+}
+
+#help td {
+  padding: 0.4rem 1rem;
+  border-bottom: 1px solid #222;
+}
+
+#help td:first-child {
+  color: #f5cf6b;
+  text-align: right;
+}
+
+#hint-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0.4rem 1rem;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  color: #6b7076;
+  background: #131315;
+  border-top: 1px solid #222;
+  text-align: center;
+}

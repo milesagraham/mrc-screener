@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mrc-screener"
+version = "0.1.0"
+description = "Fast keyboard-driven triage of cryo-ET tomograms via a browser UI."
+requires-python = ">=3.10"
+dependencies = [
+    "mrcfile>=1.4",
+    "starfile>=0.5",
+    "numpy>=1.24",
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "pillow>=10.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "httpx>=0.27"]
+
+[project.scripts]
+mrc-screener = "mrc_screener.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

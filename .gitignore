@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.venv/
+build/
+dist/
+
+# IDE / editor
+.idea/
+.claude/
+
+# Real research data -- local only, never pushed (see DECISIONS.md)
+test_materials/
+
+# Runtime output: decision journals, exports, preview caches.
+# These are generated next to whatever --out-stem the user points at, which
+# in normal use is nowhere near the repo -- ignored here defensively in case
+# someone runs mrc-screener from a repo checkout.
+*_decisions.jsonl
+*_screened.txt
+*_kept.txt
+.*_preview_cache/
