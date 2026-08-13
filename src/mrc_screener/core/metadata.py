@@ -28,8 +28,19 @@ def parse_txt_list(path: Path) -> list[RowRef]:
     return rows
 
 
-def scan_mrc_dir(directory: Path, pattern: str = "*.mrc") -> list[Path]:
-    return sorted(Path(directory).rglob(pattern))
+def scan_mrc_dir(directory: Path, pattern: str = "*.mrc", recursive: bool = False) -> list[Path]:
+    """Find MRC files directly in ``directory``.
+
+    Non-recursive by default: reconstruction directories often hold a
+    subdirectory of alternate copies of every tomogram under identical
+    filenames -- e.g. ``deconv/`` (CTF-deconvolved) alongside the plain
+    reconstruction one level up. Scanning only the directory the caller
+    actually pointed at avoids treating those as ambiguous duplicates by
+    default. Pass ``recursive=True`` for layouts that genuinely need it
+    (e.g. one subdirectory per tomogram).
+    """
+    files = Path(directory).rglob(pattern) if recursive else Path(directory).glob(pattern)
+    return sorted(files)
 
 
 def rows_to_paths(rows: Sequence[RowRef]) -> list[str]:

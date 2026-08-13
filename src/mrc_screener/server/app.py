@@ -36,6 +36,7 @@ class ServerConfig:
     mrc_dir: Path
     out_stem: Path | None = None
     preview_cache_dir: Path | None = None
+    recursive_scan: bool = False
     match_config: MatchConfig = field(default_factory=MatchConfig)
     n_previews: int = 20
     central_fraction: float = 0.5
@@ -80,7 +81,7 @@ def _row_summary(m: RowMatch) -> dict:
 
 def create_app(config: ServerConfig) -> FastAPI:
     rows = parse_txt_list(config.txt_path)
-    mrc_files = scan_mrc_dir(config.mrc_dir)
+    mrc_files = scan_mrc_dir(config.mrc_dir, recursive=config.recursive_scan)
     report: MatchReport = match_rows(rows, mrc_files, config.match_config)
 
     session = Session(journal_path=config.journal_path)

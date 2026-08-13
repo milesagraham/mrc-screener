@@ -38,6 +38,12 @@ def _add_common_args(p: argparse.ArgumentParser) -> None:
     p.add_argument("--extra-suffix", action="append", metavar="REGEX", help="additional suffix pattern to strip (repeatable)")
     p.add_argument("--extra-prefix", action="append", metavar="REGEX", help="additional prefix pattern to strip (repeatable)")
     p.add_argument("--disable-default-patterns", action="store_true", help="don't apply the built-in suffix/prefix patterns")
+    p.add_argument(
+        "--recursive",
+        action="store_true",
+        help="scan --mrc-dir recursively (default: only the directory itself, not subdirectories -- "
+        "avoids treating alternate-copy subdirectories like deconv/ as ambiguous duplicates)",
+    )
 
 
 def cmd_serve(args: argparse.Namespace) -> int:
@@ -49,6 +55,7 @@ def cmd_serve(args: argparse.Namespace) -> int:
         txt_path=args.txt,
         mrc_dir=args.mrc_dir,
         out_stem=args.out_stem,
+        recursive_scan=args.recursive,
         match_config=_build_match_config(args),
     )
     app = create_app(config)
@@ -61,7 +68,7 @@ def cmd_serve(args: argparse.Namespace) -> int:
 
 def cmd_export(args: argparse.Namespace) -> int:
     rows = parse_txt_list(args.txt)
-    mrc_files = scan_mrc_dir(args.mrc_dir)
+    mrc_files = scan_mrc_dir(args.mrc_dir, recursive=args.recursive)
     report = match_rows(rows, mrc_files, _build_match_config(args))
     match_by_row = {m.row.row_id: m for m in report.matches}
 

@@ -155,6 +155,35 @@ window per volume makes real density variation visible instead of hiding it.
 
 ---
 
+## D9 — `scan_mrc_dir` is non-recursive by default
+
+**Decision.** `--mrc-dir` is scanned with `glob`, not `rglob`, unless `--recursive` is
+passed.
+
+**Context.** Discovered on real data, not anticipated in the initial design (which
+used `rglob` unconditionally). A `tiltseries/reconstruction/deconv/` subdirectory held
+a CTF-deconvolved copy of every tomogram under the *same filename* as the plain
+reconstruction one level up. Recursing into it by default meant every one of 814 rows
+legitimately resolved to two real files — reported as ambiguous, correctly, but the
+entire dataset was unscreenable without 814 manual overrides.
+
+**Rejected alternative.** A first pass at this added `--exclude-path REGEX` to filter
+scanned paths after a recursive walk. Working, but backwards: it made the surprising
+behavior (recurse into everything) the default and required a flag to get back to the
+unsurprising one (scan what you pointed at). Replaced with a non-recursive default and
+`--recursive` as the opt-in for layouts that genuinely need to walk subdirectories
+(e.g. one folder per tomogram) — zero configuration needed for the common case, and
+the flag that exists is the one you reach for rarely, not the one you need immediately
+after hitting the problem.
+
+**Why not auto-recognize `deconv/` and prefer it, or any other smart default.**
+Which copy is "correct" is a genuine per-pipeline judgment call — some users will want
+the deconvolved version for screening (better contrast), others the plain
+reconstruction. Guessing either way violates D5's core rule; scanning shallowly
+sidesteps the question entirely rather than answering it on the user's behalf.
+
+---
+
 ## Open questions
 
 Not blocking; resolve when the need is real.

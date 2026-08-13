@@ -50,7 +50,8 @@ ssh -L 8000:localhost:8000 <that machine>
 
 ```
 --txt PATH                index<TAB>path row list
---mrc-dir PATH             directory to scan for MRC files
+--mrc-dir PATH             directory to scan for MRC files (not recursive by default)
+--recursive                also scan subdirectories of --mrc-dir
 --out-stem PATH            output path stem (default: --txt without extension)
 --overrides PATH           TSV/CSV of row-reference -> explicit filename
 --extra-suffix REGEX       additional suffix pattern to strip (repeatable)
@@ -58,6 +59,17 @@ ssh -L 8000:localhost:8000 <that machine>
 --disable-default-patterns don't apply the built-in suffix/prefix patterns
 --port PORT                default 8000
 ```
+
+`--mrc-dir` scans only the directory you point it at, not subdirectories.
+This matters: reconstruction directories often hold a subdirectory of
+alternate copies of every tomogram under identical filenames — e.g.
+`deconv/` (CTF-deconvolved) alongside the plain reconstruction one level up.
+A recursive scan would find both and correctly report every such row as
+ambiguous (two real files, same name — not a mismatch a pattern can
+resolve). Scanning shallowly by default means you point `--mrc-dir` at
+whichever copy you actually want to screen, and the other copy is simply
+never seen. Pass `--recursive` for layouts that genuinely need it, e.g. one
+subdirectory per tomogram.
 
 Regenerate `_screened.txt`/`_kept.txt` from an existing decision journal
 without starting a server:
