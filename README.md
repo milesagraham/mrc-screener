@@ -28,9 +28,12 @@ See [CLAUDE.md](CLAUDE.md) for the full design rules and
 ## Install
 
 ```bash
-python3 -m venv .venv
-.venv/bin/pip install -e ".[dev]"
+conda create -n mrc-screener python=3.10
+conda activate mrc-screener
+pip install -e .
 ```
+
+For running the test suite, add the dev extras: `pip install -e ".[dev]"`.
 
 ## Run
 
@@ -132,7 +135,8 @@ tests/
 ## Testing
 
 ```bash
-.venv/bin/pytest
+pip install -e ".[dev]"
+pytest
 ```
 
 Tests use synthetic MRCs generated via `mrcfile`. A handful of tests also

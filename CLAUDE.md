@@ -12,7 +12,7 @@ non-destructively as you press keys.
 
 ## Stack
 
-- Python 3.10+ (local venv at `.venv`, Python 3.10.7; the cluster is the real target)
+- Python 3.10+ (conda env `mrc-screener`, editable-installed via `pip install -e .`; the cluster is the real target)
 - `mrcfile` — MRC I/O, **memory-mapped only** (see Hard Rules)
 - `starfile` — RELION STAR read/write
 - `numpy` — slice math
@@ -148,9 +148,10 @@ filename. The user needs to know how much is left without asking.
 ## Commands
 
 ```bash
-.venv/bin/pip install -e ".[dev]"      # install
-.venv/bin/pytest                       # tests
-.venv/bin/mrc-screener serve --help    # run
+conda activate mrc-screener            # or: conda create -n mrc-screener python=3.10 && conda activate mrc-screener
+pip install -e ".[dev]"                # install
+pytest                                 # tests
+mrc-screener serve --help              # run
 ```
 
 ## Working conventions
