@@ -130,7 +130,9 @@ Given `--txt input_list.txt` (and no `--out-stem`), a session produces:
   The durable source of truth; everything else is regenerated from it.
 - `input_list_screened.txt` — every input row, plus its status
   (`keep`/`reject`/`undecided`/`unmatched`/`ambiguous`) and resolved path.
-- `input_list_kept.txt` — kept rows only.
+- `input_list_kept.txt` — kept rows only, one reference per line in the
+  exact form it appeared in `--txt` (no index column), so it can be reused
+  directly as a new row list.
 
 ## Layout
 

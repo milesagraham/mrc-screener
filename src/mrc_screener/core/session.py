@@ -102,7 +102,10 @@ def write_outputs(
     out_stem: Path,
 ) -> tuple[Path, Path]:
     """Write ``<out_stem>_screened.txt`` (every row, with its status) and
-    ``<out_stem>_kept.txt`` (kept rows only). Never touches the input file."""
+    ``<out_stem>_kept.txt`` (kept rows only, one reference per line -- no
+    index column, exactly the reference text as it appeared in the input,
+    so the file can be reused directly as a new row list). Never touches
+    the input file."""
     out_stem = Path(out_stem)
     screened_path = out_stem.parent / f"{out_stem.name}_screened.txt"
     kept_path = out_stem.parent / f"{out_stem.name}_kept.txt"
@@ -119,7 +122,7 @@ def write_outputs(
             matched = str(m.matched_path)
         screened_lines.append(f"{row.row_id}\t{row.reference}\t{status}\t{matched}")
         if status == Decision.KEEP.value:
-            kept_lines.append(f"{row.row_id}\t{row.reference}")
+            kept_lines.append(row.reference)
 
     screened_path.write_text("\n".join(screened_lines) + ("\n" if screened_lines else ""))
     kept_path.write_text("\n".join(kept_lines) + ("\n" if kept_lines else ""))

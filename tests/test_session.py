@@ -95,4 +95,4 @@ def test_write_outputs_includes_unmatched_rows_and_kept_only_file(tmp_path):
     assert screened[3] == "4\tgone.star\tunmatched\t"
 
     kept = kept_path.read_text().splitlines()
-    assert kept == ["1\tkept.star"]
+    assert kept == ["kept.star"]  # exact reference text, no index column
