@@ -144,6 +144,13 @@ function goToNext() {
   loadRow(next);
 }
 
+function goToOffset(delta) {
+  if (queue.length === 0) return;
+  const idx =
+    currentIdx === -1 ? (delta > 0 ? 0 : queue.length - 1) : (currentIdx + delta + queue.length) % queue.length;
+  loadRow(idx);
+}
+
 async function undo() {
   const res = await fetch("/api/undo", { method: "POST" });
   const data = await res.json();
@@ -188,18 +195,18 @@ document.addEventListener("keydown", (e) => {
   }
   if (helpVisible) return;
   switch (e.key) {
-    case "ArrowRight":
-    case "l":
     case "Enter":
       decide("keep");
-      break;
-    case "ArrowLeft":
-    case "h":
-      decide("reject");
       break;
     case "Backspace":
       e.preventDefault();
       decide("reject");
+      break;
+    case "ArrowRight":
+      goToOffset(1);
+      break;
+    case "ArrowLeft":
+      goToOffset(-1);
       break;
     case "ArrowUp":
       scrub(1);
