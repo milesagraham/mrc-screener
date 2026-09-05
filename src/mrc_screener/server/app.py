@@ -30,6 +30,22 @@ from ..core.session import Decision, Session, write_outputs
 STATIC_DIR = Path(__file__).parent / "static"
 
 
+class NoCacheStaticFiles(StaticFiles):
+    """Force revalidation on every load.
+
+    A screening session keeps one tab open over an ssh tunnel for hours or
+    days (see CLAUDE.md). Without this, browsers heuristically cache
+    app.js/index.html and a code update won't take effect until a hard
+    refresh -- the UI can end up showing new labels for old key bindings.
+    ETag/Last-Modified still let an unchanged file round-trip as a cheap 304.
+    """
+
+    def file_response(self, *args, **kwargs) -> Response:
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 @dataclass
 class ServerConfig:
     txt_path: Path
@@ -120,11 +136,11 @@ def create_app(config: ServerConfig) -> FastAPI:
         frames.close_all_handles()
 
     app = FastAPI(title="mrc-screener", lifespan=lifespan)
-    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+    app.mount("/static", NoCacheStaticFiles(directory=STATIC_DIR), name="static")
 
     @app.get("/")
     def index() -> FileResponse:
-        return FileResponse(STATIC_DIR / "index.html")
+        return FileResponse(STATIC_DIR / "index.html", headers={"Cache-Control": "no-cache"})
 
     @app.get("/api/state")
     def get_state() -> dict:
