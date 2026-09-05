@@ -190,10 +190,15 @@ document.addEventListener("keydown", (e) => {
   switch (e.key) {
     case "ArrowRight":
     case "l":
+    case "Enter":
       decide("keep");
       break;
     case "ArrowLeft":
     case "h":
+      decide("reject");
+      break;
+    case "Backspace":
+      e.preventDefault();
       decide("reject");
       break;
     case "ArrowUp":

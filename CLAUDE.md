@@ -135,8 +135,8 @@ Keyboard-first; the mouse is optional. Bindings:
 
 | Key | Action |
 |---|---|
-| `→` / `l` | keep, advance |
-| `←` / `h` | reject, advance |
+| `→` / `l` / `Enter` | keep, advance |
+| `←` / `h` / `Backspace` | reject, advance |
 | `↑` / `↓` | scrub Z slices |
 | `u` | undo last decision |
 | `space` | skip without deciding |
