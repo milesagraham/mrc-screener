@@ -124,10 +124,15 @@ into it.
 
 ## Scope
 
-**Tomograms first.** The user also has tilt series, 2D micrographs, and particle
-stacks, and will want those later. Design `core/io.py` and `core/preview.py` around a
-"give me the k-th 2D frame of this file" abstraction so a new data type is a new
-strategy, not a rewrite. Do not build the other types until asked.
+**Tomograms and tilt series.** The user also has 2D micrographs and particle
+stacks, and will want those later. `core/io.py` provides "give me the k-th 2D frame
+of this file"; `core/modes.py` holds one preview strategy per data type (which
+frames, what order, what labels, which frames feed the contrast window), so a new
+data type is a new strategy, not a rewrite. Do not build the other types until asked.
+
+Tilt series (`--mode tiltseries`) show every tilt, ordered by angle when a
+`.tlt`/`.rawtlt`/`.mdoc` sidecar with a matching count exists. Never invent or
+guess angles — if none are found, show file order and say so in the UI.
 
 ## UI conventions
 

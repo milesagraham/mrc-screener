@@ -16,7 +16,8 @@ import sys
 from pathlib import Path
 
 from .core.matching import MatchConfig, load_overrides, match_rows
-from .core.metadata import parse_txt_list, scan_mrc_dir
+from .core.metadata import normalize_extensions, parse_txt_list, scan_mrc_dir
+from .core.modes import DataMode
 from .core.session import Session, write_outputs
 
 
@@ -25,9 +26,31 @@ def _build_match_config(args: argparse.Namespace) -> MatchConfig:
     return MatchConfig(
         extra_suffix_patterns=tuple(args.extra_suffix or ()),
         extra_prefix_patterns=tuple(args.extra_prefix or ()),
+        # anything the user scans for must also be stripped as an extension
+        # during matching, or e.g. --ext .tif files could never stem-match
+        extra_extensions=_extensions(args),
         disable_default_patterns=args.disable_default_patterns,
         manual_overrides=overrides,
     )
+
+
+def _extensions(args: argparse.Namespace) -> tuple[str, ...]:
+    return normalize_extensions(args.ext or (".mrc",))
+
+
+TILT_STACK_EXTENSIONS = frozenset({".st", ".ali", ".mrcs"})
+
+
+def _warn_on_mode_mismatch(args: argparse.Namespace) -> None:
+    """Tilt-stack extensions with tomogram mode is probably a mistake --
+    say so rather than quietly previewing only the central 50% of tilts."""
+    suspicious = sorted(set(_extensions(args)) & TILT_STACK_EXTENSIONS)
+    if suspicious and DataMode(args.mode) is DataMode.TOMOGRAM:
+        print(
+            f"warning: scanning {', '.join(suspicious)} files in tomogram mode -- only the central "
+            f"50% of frames will be shown. Use --mode tiltseries to see the full tilt range.",
+            file=sys.stderr,
+        )
 
 
 def _add_common_args(p: argparse.ArgumentParser) -> None:
@@ -38,6 +61,13 @@ def _add_common_args(p: argparse.ArgumentParser) -> None:
     p.add_argument("--extra-suffix", action="append", metavar="REGEX", help="additional suffix pattern to strip (repeatable)")
     p.add_argument("--extra-prefix", action="append", metavar="REGEX", help="additional prefix pattern to strip (repeatable)")
     p.add_argument("--disable-default-patterns", action="store_true", help="don't apply the built-in suffix/prefix patterns")
+    p.add_argument(
+        "--ext",
+        action="append",
+        metavar="EXT",
+        help="file extension to scan --mrc-dir for (repeatable, e.g. --ext .mrc --ext .st; default: .mrc). "
+        "Scanning several extensions can make rows ambiguous when e.g. TS_01.st and TS_01.mrc both exist.",
+    )
     p.add_argument(
         "--recursive",
         action="store_true",
@@ -56,9 +86,13 @@ def cmd_serve(args: argparse.Namespace) -> int:
         mrc_dir=args.mrc_dir,
         out_stem=args.out_stem,
         recursive_scan=args.recursive,
+        extensions=_extensions(args),
+        mode=DataMode(args.mode),
         match_config=_build_match_config(args),
     )
+    _warn_on_mode_mismatch(args)
     app = create_app(config)
+    print(f"mode: {config.mode.value}   extensions: {' '.join(config.extensions)}")
     print(f"journal: {config.journal_path}")
     print(f"serving on http://127.0.0.1:{args.port} -- tunnel with:")
     print(f"  ssh -L {args.port}:localhost:{args.port} <this host>")
@@ -68,7 +102,7 @@ def cmd_serve(args: argparse.Namespace) -> int:
 
 def cmd_export(args: argparse.Namespace) -> int:
     rows = parse_txt_list(args.txt)
-    mrc_files = scan_mrc_dir(args.mrc_dir, recursive=args.recursive)
+    mrc_files = scan_mrc_dir(args.mrc_dir, extensions=_extensions(args), recursive=args.recursive)
     report = match_rows(rows, mrc_files, _build_match_config(args))
     match_by_row = {m.row.row_id: m for m in report.matches}
 
@@ -94,6 +128,13 @@ def main(argv: list[str] | None = None) -> int:
     serve_p = sub.add_parser("serve", help="run the screening server")
     _add_common_args(serve_p)
     serve_p.add_argument("--port", type=int, default=8000)
+    serve_p.add_argument(
+        "--mode",
+        choices=[m.value for m in DataMode],
+        default=DataMode.TOMOGRAM.value,
+        help="tomogram: 20 Z slices from the central 50%% (default). "
+        "tiltseries: every tilt, ordered by angle when a .tlt/.rawtlt/.mdoc sidecar is found.",
+    )
     serve_p.set_defaults(func=cmd_serve)
 
     export_p = sub.add_parser("export", help="regenerate outputs from the decision journal")

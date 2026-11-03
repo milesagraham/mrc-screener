@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Sequence
+from typing import Iterable, Sequence
 
 from .matching import RowRef
 
@@ -28,8 +28,41 @@ def parse_txt_list(path: Path) -> list[RowRef]:
     return rows
 
 
-def scan_mrc_dir(directory: Path, pattern: str = "*.mrc", recursive: bool = False) -> list[Path]:
-    """Find MRC files directly in ``directory``.
+DEFAULT_SCAN_EXTENSIONS: tuple[str, ...] = (".mrc",)
+
+
+def normalize_extensions(extensions: Iterable[str]) -> tuple[str, ...]:
+    """Lower-case, ensure a leading dot, de-duplicate preserving order.
+
+    ``"st"``, ``".ST"`` and ``".st"`` all mean the same thing on the command
+    line; an empty string is rejected rather than silently matching every file.
+    """
+    out: list[str] = []
+    for ext in extensions:
+        e = ext.strip().lower()
+        if not e or e == ".":
+            raise ValueError(f"invalid extension {ext!r}")
+        if not e.startswith("."):
+            e = "." + e
+        if e not in out:
+            out.append(e)
+    if not out:
+        raise ValueError("at least one extension is required")
+    return tuple(out)
+
+
+def scan_mrc_dir(
+    directory: Path,
+    extensions: Iterable[str] = DEFAULT_SCAN_EXTENSIONS,
+    recursive: bool = False,
+) -> list[Path]:
+    """Find candidate image files directly in ``directory``.
+
+    ``extensions`` selects which files count (default ``.mrc`` only). IMOD
+    ``.st``/``.ali`` stacks are plain MRC files under another name; they are
+    opt-in because a typical IMOD directory holds ``TS_01.st``, ``TS_01.ali``
+    and ``TS_01_rec.mrc`` side by side, and scanning all of them would make
+    every row ambiguous. Extension matching is case-insensitive.
 
     Non-recursive by default: reconstruction directories often hold a
     subdirectory of alternate copies of every tomogram under identical
@@ -39,8 +72,9 @@ def scan_mrc_dir(directory: Path, pattern: str = "*.mrc", recursive: bool = Fals
     default. Pass ``recursive=True`` for layouts that genuinely need it
     (e.g. one subdirectory per tomogram).
     """
-    files = Path(directory).rglob(pattern) if recursive else Path(directory).glob(pattern)
-    return sorted(files)
+    exts = normalize_extensions(extensions)
+    entries = Path(directory).rglob("*") if recursive else Path(directory).glob("*")
+    return sorted(p for p in entries if p.name.lower().endswith(exts) and p.is_file())
 
 
 def rows_to_paths(rows: Sequence[RowRef]) -> list[str]:

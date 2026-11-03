@@ -65,3 +65,74 @@ def test_deconv_subdirectory_is_invisible_by_default_and_ambiguous_if_opted_into
     recursive_report = match_rows(rows, scan_mrc_dir(tmp_path, recursive=True))
     assert recursive_report.matches[0].tier is MatchTier.AMBIGUOUS
     assert len(recursive_report.matches[0].candidates) == 2
+
+
+def test_scan_mrc_dir_ignores_st_by_default(tmp_path):
+    touch(tmp_path / "a.mrc")
+    touch(tmp_path / "b.st")
+    assert scan_mrc_dir(tmp_path) == [tmp_path / "a.mrc"]
+
+
+def test_scan_mrc_dir_custom_extensions(tmp_path):
+    touch(tmp_path / "a.mrc")
+    touch(tmp_path / "b.st")
+    touch(tmp_path / "c.ali")
+    assert scan_mrc_dir(tmp_path, extensions=[".st"]) == [tmp_path / "b.st"]
+    assert scan_mrc_dir(tmp_path, extensions=[".mrc", ".st"]) == [tmp_path / "a.mrc", tmp_path / "b.st"]
+
+
+def test_scan_mrc_dir_extensions_case_insensitive_and_dot_optional(tmp_path):
+    touch(tmp_path / "a.ST")
+    touch(tmp_path / "b.st")
+    assert scan_mrc_dir(tmp_path, extensions=["st"]) == [tmp_path / "a.ST", tmp_path / "b.st"]
+
+
+def test_scan_mrc_dir_extension_must_be_whole_suffix(tmp_path):
+    touch(tmp_path / "a.mrc")
+    touch(tmp_path / "a.mrcs")
+    touch(tmp_path / "a.mrc.mdoc")  # SerialEM sidecar, never an image
+    assert scan_mrc_dir(tmp_path, extensions=[".mrc"]) == [tmp_path / "a.mrc"]
+
+
+def test_scan_mrc_dir_skips_directories_named_like_files(tmp_path):
+    (tmp_path / "weird.mrc").mkdir()
+    touch(tmp_path / "a.mrc")
+    assert scan_mrc_dir(tmp_path) == [tmp_path / "a.mrc"]
+
+
+def test_normalize_extensions():
+    from mrc_screener.core.metadata import normalize_extensions
+
+    assert normalize_extensions(["st", ".MRC", ".st"]) == (".st", ".mrc")
+    import pytest
+
+    with pytest.raises(ValueError):
+        normalize_extensions([""])
+    with pytest.raises(ValueError):
+        normalize_extensions([])
+
+
+def test_same_stem_st_and_mrc_are_ambiguous_not_guessed(tmp_path):
+    # Two files that differ only by extension are indistinguishable to the
+    # matcher; scanning both must surface ambiguity, never pick one.
+    touch(tmp_path / "TS_01.st")
+    touch(tmp_path / "TS_01.mrc")
+    rows = [RowRef("1", "TS_01.tomostar")]
+    report = match_rows(rows, scan_mrc_dir(tmp_path, extensions=[".mrc", ".st"]))
+    assert report.matches[0].tier is MatchTier.AMBIGUOUS
+    assert len(report.matches[0].candidates) == 2
+    # ...and either extension alone resolves cleanly
+    only_st = match_rows(rows, scan_mrc_dir(tmp_path, extensions=[".st"]))
+    assert only_st.matches[0].matched_path == tmp_path / "TS_01.st"
+
+
+def test_st_exact_stem_outranks_rec_normalized_match(tmp_path):
+    # Tiered matching (CLAUDE.md rule 3): TS_01.st is an exact-stem hit,
+    # TS_01_rec.mrc only a normalized one, so the higher tier wins and the
+    # tier is reported. Pins this so a mixed --ext scan is predictable.
+    touch(tmp_path / "TS_01.st")
+    touch(tmp_path / "TS_01_rec.mrc")
+    rows = [RowRef("1", "TS_01.tomostar")]
+    report = match_rows(rows, scan_mrc_dir(tmp_path, extensions=[".mrc", ".st"]))
+    assert report.matches[0].tier is MatchTier.EXACT_STEM
+    assert report.matches[0].matched_path == tmp_path / "TS_01.st"

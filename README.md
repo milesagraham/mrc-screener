@@ -52,6 +52,8 @@ ssh -L 8000:localhost:8000 <that machine>
 --txt PATH                index<TAB>path row list
 --mrc-dir PATH             directory to scan for MRC files (not recursive by default)
 --recursive                also scan subdirectories of --mrc-dir
+--ext EXT                  file extension to scan for (repeatable; default .mrc)
+--mode MODE                tomogram (default) or tiltseries  [serve only]
 --out-stem PATH            output path stem (default: --txt without extension)
 --overrides PATH           TSV/CSV of row-reference -> explicit filename
 --extra-suffix REGEX       additional suffix pattern to strip (repeatable)
@@ -70,6 +72,29 @@ resolve). Scanning shallowly by default means you point `--mrc-dir` at
 whichever copy you actually want to screen, and the other copy is simply
 never seen. Pass `--recursive` for layouts that genuinely need it, e.g. one
 subdirectory per tomogram.
+
+### Tilt series and other extensions
+
+IMOD `.st`/`.ali` stacks are ordinary MRC files under another name. They are
+not scanned unless you ask, because a typical IMOD directory holds
+`TS_01.st`, `TS_01.ali` and `TS_01_rec.mrc` side by side:
+
+```bash
+mrc-screener serve --txt list.txt --mrc-dir /path/to/stacks --ext .st --mode tiltseries
+```
+
+`--ext` is repeatable (`--ext .mrc --ext .st`), but scanning several
+extensions in one directory can make rows ambiguous (`TS_01.st` and
+`TS_01.mrc` both match `TS_01`) — the match report will say so.
+
+`--mode tiltseries` shows **every** tilt rather than 20 central slices, and
+computes the contrast window across the whole tilt range. If a sidecar with
+a matching number of angles sits next to the stack — `TS_01.tlt`,
+`TS_01.rawtlt`, `TS_01.st.mdoc` or `TS_01.mdoc`, in that order of
+preference — tilts are ordered by angle, labelled with it, and the viewer
+opens on the tilt nearest 0°. Without one, tilts are shown in file order and
+the viewer says that no angles were found. A sidecar whose angle count
+doesn't match the stack is ignored and reported, never trusted.
 
 Regenerate `_screened.txt`/`_kept.txt` from an existing decision journal
 without starting a server:
@@ -160,9 +185,9 @@ tests skip cleanly if the directory isn't present.
 
 ## Status
 
-Tomograms only, for now. `core/io.py`'s frame-access abstraction is meant to
-extend to tilt series, 2D micrographs, and particle stacks later without a
-rewrite — see the Scope section in `CLAUDE.md`.
+Tomograms and tilt series (`--mode tiltseries`). Per-type preview strategies
+live in `core/modes.py`; 2D micrographs and particle stacks are meant to slot
+in there later without a rewrite — see the Scope section in `CLAUDE.md`.
 
 ## License
 
