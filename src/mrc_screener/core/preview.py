@@ -96,8 +96,19 @@ class PreviewCache:
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
 
-    def _key(self, path: str, mtime_ns: int, size: int, index: int, target_long_axis: int, quality: int) -> str:
-        raw = f"{path}|{mtime_ns}|{size}|{index}|{target_long_axis}|{quality}"
+    def _key(
+        self,
+        path: str,
+        mtime_ns: int,
+        size: int,
+        index: int,
+        target_long_axis: int,
+        quality: int,
+        contrast_fraction: float = DEFAULT_CENTRAL_FRACTION,
+    ) -> str:
+        # contrast_fraction changes the contrast window (tomogram vs tilt
+        # series sample different frames), so it must be part of the key.
+        raw = f"{path}|{mtime_ns}|{size}|{index}|{target_long_axis}|{quality}|cf={contrast_fraction:g}"
         return hashlib.sha1(raw.encode()).hexdigest()
 
     def _cache_path(self, key: str) -> Path:
@@ -119,15 +130,20 @@ def get_preview_jpeg(
     cache: PreviewCache,
     target_long_axis: int = DEFAULT_TARGET_LONG_AXIS,
     quality: int = DEFAULT_JPEG_QUALITY,
+    contrast_fraction: float = DEFAULT_CENTRAL_FRACTION,
 ) -> bytes:
+    """Encoded preview of frame ``index``. ``contrast_fraction`` is the
+    central fraction of the stack sampled for the per-file contrast window:
+    0.5 for tomograms (skip junk top/bottom), 1.0 for tilt series (window
+    must cover high tilts too)."""
     path = Path(path)
     st = path.stat()
-    key_parts = (str(path), st.st_mtime_ns, st.st_size, index, target_long_axis, quality)
+    key_parts = (str(path), st.st_mtime_ns, st.st_size, index, target_long_axis, quality, contrast_fraction)
     cached = cache.get(*key_parts)
     if cached is not None:
         return cached
 
-    lo, hi = get_contrast_window(path)
+    lo, hi = get_contrast_window(path, central_fraction=contrast_fraction)
     frame = read_frame(path, index)
     binned, _ = bin_frame(frame, target_long_axis)
     img8 = normalize_to_uint8(binned, lo, hi)

@@ -55,6 +55,33 @@ html, body {
   color: #9aa0a6;
 }
 
+#mode {
+  color: #9aa0a6;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid #3c4043;
+  border-radius: 3px;
+  padding: 0.05rem 0.4rem;
+}
+
+#plan-note:empty {
+  display: none;
+}
+
+#plan-note {
+  position: absolute;
+  bottom: 0.75rem;
+  left: 1rem;
+  max-width: 60%;
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  color: #9aa0a6;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+}
+
 #viewer {
   position: relative;
   height: calc(100vh - 3rem - 2.2rem);

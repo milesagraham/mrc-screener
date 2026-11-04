@@ -11,12 +11,14 @@
   <div id="status-bar">
     <span id="position">-- / --</span>
     <span id="filename"></span>
+    <span id="mode"></span>
     <span id="counts">keep 0 &middot; reject 0</span>
   </div>
 
   <div id="viewer">
     <img id="frame" alt="tomogram preview" />
     <div id="slice-label"></div>
+    <div id="plan-note"></div>
   </div>
 
   <div id="done" class="hidden">
@@ -31,14 +33,14 @@
       <tr><td>enter</td><td>keep, advance</td></tr>
       <tr><td>backspace</td><td>reject, advance</td></tr>
       <tr><td>&rarr; / &larr;</td><td>next / previous tomogram</td></tr>
-      <tr><td>&uarr; / &darr;</td><td>scrub Z slices</td></tr>
+      <tr><td>&uarr; / &darr;</td><td id="scrub-help">scrub Z slices</td></tr>
       <tr><td>u</td><td>undo last decision</td></tr>
       <tr><td>space</td><td>skip without deciding</td></tr>
       <tr><td>?</td><td>show/hide this help</td></tr>
     </table>
   </div>
 
-  <div id="hint-bar">enter keep &middot; backspace reject &middot; &rarr;/&larr; next/prev &middot; &uarr;/&darr; scrub &middot; u undo &middot; space skip &middot; ? help</div>
+  <div id="hint-bar">enter keep &middot; backspace reject &middot; &rarr;/&larr; next/prev &middot; &uarr;/&darr; <span id="scrub-hint">scrub</span> &middot; u undo &middot; space skip &middot; ? help</div>
 
   <script src="/static/app.js" defer></script>
 </body>

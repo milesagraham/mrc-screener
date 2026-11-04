@@ -23,7 +23,8 @@ from pydantic import BaseModel
 
 from ..core import io as frames
 from ..core.matching import MatchConfig, MatchReport, RowMatch, match_rows
-from ..core.metadata import parse_txt_list, scan_mrc_dir
+from ..core.metadata import DEFAULT_SCAN_EXTENSIONS, normalize_extensions, parse_txt_list, scan_mrc_dir
+from ..core.modes import DataMode, PreviewPlan, plan_previews
 from ..core.preview import PreviewCache, get_preview_jpeg
 from ..core.session import Decision, Session, write_outputs
 
@@ -53,6 +54,8 @@ class ServerConfig:
     out_stem: Path | None = None
     preview_cache_dir: Path | None = None
     recursive_scan: bool = False
+    extensions: tuple[str, ...] = DEFAULT_SCAN_EXTENSIONS
+    mode: DataMode = DataMode.TOMOGRAM
     match_config: MatchConfig = field(default_factory=MatchConfig)
     n_previews: int = 20
     central_fraction: float = 0.5
@@ -62,6 +65,8 @@ class ServerConfig:
     def __post_init__(self) -> None:
         self.txt_path = Path(self.txt_path)
         self.mrc_dir = Path(self.mrc_dir)
+        self.extensions = normalize_extensions(self.extensions)
+        self.mode = DataMode(self.mode)
         if self.out_stem is None:
             self.out_stem = self.txt_path.with_suffix("")
         else:
@@ -74,12 +79,6 @@ class ServerConfig:
     @property
     def journal_path(self) -> Path:
         return self.out_stem.parent / f"{self.out_stem.name}_decisions.jsonl"
-
-
-@dataclass
-class RowInfo:
-    n_frames: int
-    preview_indices: list[int]
 
 
 class DecisionBody(BaseModel):
@@ -97,7 +96,7 @@ def _row_summary(m: RowMatch) -> dict:
 
 def create_app(config: ServerConfig) -> FastAPI:
     rows = parse_txt_list(config.txt_path)
-    mrc_files = scan_mrc_dir(config.mrc_dir, recursive=config.recursive_scan)
+    mrc_files = scan_mrc_dir(config.mrc_dir, extensions=config.extensions, recursive=config.recursive_scan)
     report: MatchReport = match_rows(rows, mrc_files, config.match_config)
 
     session = Session(journal_path=config.journal_path)
@@ -108,18 +107,16 @@ def create_app(config: ServerConfig) -> FastAPI:
     queue_by_row = {m.row.row_id: m for m in queue}
 
     preview_cache = PreviewCache(config.preview_cache_dir)
-    row_info_cache: dict[str, RowInfo] = {}
+    row_info_cache: dict[str, PreviewPlan] = {}
     row_info_lock = threading.Lock()
 
-    def get_row_info(m: RowMatch) -> RowInfo:
+    def get_row_info(m: RowMatch) -> PreviewPlan:
         row_id = m.row.row_id
         with row_info_lock:
             info = row_info_cache.get(row_id)
         if info is not None:
             return info
-        n_frames, _, _ = frames.get_shape(m.matched_path)
-        indices = frames.central_frame_indices(n_frames, config.n_previews, config.central_fraction)
-        info = RowInfo(n_frames=n_frames, preview_indices=indices)
+        info = plan_previews(m.matched_path, config.mode, config.n_previews, config.central_fraction)
         with row_info_lock:
             row_info_cache[row_id] = info
         return info
@@ -150,6 +147,8 @@ def create_app(config: ServerConfig) -> FastAPI:
             ],
             "counts": session.counts(),
             "total": len(queue),
+            "mode": config.mode.value,
+            "extensions": list(config.extensions),
             "issues": {
                 "unmatched": [_row_summary(m) for m in report.unmatched],
                 "ambiguous": [
@@ -169,23 +168,30 @@ def create_app(config: ServerConfig) -> FastAPI:
         return {
             **_row_summary(m),
             "decision": session.decision_for(row_id).value,
+            "mode": info.mode.value,
             "n_frames": info.n_frames,
-            "n_previews": len(info.preview_indices),
+            "n_previews": len(info.frame_indices),
+            "labels": info.labels,
+            "start_pos": info.start_pos,
+            "tilt_angles": info.tilt_angles,
+            "angle_source": info.angle_source,
+            "note": info.note,
         }
 
     @app.get("/api/rows/{row_id}/preview/{pos}")
     def get_preview(row_id: str, pos: int) -> Response:
         m = require_queued(row_id)
         info = get_row_info(m)
-        if not (0 <= pos < len(info.preview_indices)):
-            raise HTTPException(404, f"preview position {pos} out of range (0..{len(info.preview_indices) - 1})")
-        frame_index = info.preview_indices[pos]
+        if not (0 <= pos < len(info.frame_indices)):
+            raise HTTPException(404, f"preview position {pos} out of range (0..{len(info.frame_indices) - 1})")
+        frame_index = info.frame_indices[pos]
         data = get_preview_jpeg(
             m.matched_path,
             frame_index,
             preview_cache,
             target_long_axis=config.target_long_axis,
             quality=config.jpeg_quality,
+            contrast_fraction=info.contrast_fraction,
         )
         return Response(content=data, media_type="image/jpeg")
 

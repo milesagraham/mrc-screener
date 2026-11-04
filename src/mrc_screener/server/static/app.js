@@ -8,6 +8,10 @@ const el = {
   counts: document.getElementById("counts"),
   frame: document.getElementById("frame"),
   sliceLabel: document.getElementById("slice-label"),
+  planNote: document.getElementById("plan-note"),
+  mode: document.getElementById("mode"),
+  scrubHelp: document.getElementById("scrub-help"),
+  scrubHint: document.getElementById("scrub-hint"),
   viewer: document.getElementById("viewer"),
   done: document.getElementById("done"),
   doneSummary: document.getElementById("done-summary"),
@@ -18,7 +22,8 @@ const el = {
 
 let queue = [];
 let currentIdx = -1;
-let currentRowDetail = null; // {n_frames, n_previews}
+let currentRowDetail = null; // {n_frames, n_previews, labels, start_pos, note}
+let mode = "tomogram";
 let slicePos = 0;
 let helpVisible = false;
 
@@ -26,6 +31,8 @@ async function loadState() {
   const res = await fetch("/api/state");
   const state = await res.json();
   queue = state.queue;
+  mode = state.mode || "tomogram";
+  renderMode();
   renderBanner(state.issues);
   updateCounts(state.counts);
   const start = findFirstUndecided(0);
@@ -34,6 +41,14 @@ async function loadState() {
     return;
   }
   await loadRow(start);
+}
+
+function renderMode() {
+  const tilt = mode === "tiltseries";
+  el.mode.textContent = tilt ? "tilt series" : "tomogram";
+  el.scrubHelp.textContent = tilt ? "scrub tilts (up = higher angle)" : "scrub Z slices";
+  el.scrubHint.textContent = tilt ? "scrub tilts" : "scrub";
+  el.frame.alt = tilt ? "tilt series preview" : "tomogram preview";
 }
 
 function renderBanner(issues) {
@@ -68,7 +83,8 @@ async function loadRow(idx) {
   const row = queue[idx];
   const res = await fetch(`/api/rows/${encodeURIComponent(row.row_id)}`);
   currentRowDetail = await res.json();
-  slicePos = Math.floor(currentRowDetail.n_previews / 2);
+  slicePos = currentRowDetail.start_pos ?? Math.floor(currentRowDetail.n_previews / 2);
+  el.planNote.textContent = currentRowDetail.note || "";
   renderFrame();
   renderHeader();
   prefetchNeighbors();
@@ -83,7 +99,10 @@ function renderHeader() {
 function renderFrame() {
   const row = queue[currentIdx];
   el.frame.src = `/api/rows/${encodeURIComponent(row.row_id)}/preview/${slicePos}`;
-  el.sliceLabel.textContent = `slice ${slicePos + 1} / ${currentRowDetail.n_previews}`;
+  const n = currentRowDetail.n_previews;
+  const label = currentRowDetail.labels ? currentRowDetail.labels[slicePos] : "";
+  const noun = mode === "tiltseries" ? "tilt" : "slice";
+  el.sliceLabel.textContent = `${noun} ${slicePos + 1} / ${n}` + (label ? ` \u00b7 ${label}` : "");
 }
 
 function updateCounts(counts) {
@@ -111,7 +130,7 @@ function prefetchNeighbors() {
     fetch(`/api/rows/${encodeURIComponent(queue[j].row_id)}`)
       .then((r) => r.json())
       .then((info) => {
-        const mid = Math.floor(info.n_previews / 2);
+        const mid = info.start_pos ?? Math.floor(info.n_previews / 2);
         preload(`/api/rows/${encodeURIComponent(queue[j].row_id)}/preview/${mid}`);
       });
   }
